@@ -4,6 +4,7 @@
 /* $begin csapp.h */
 #ifndef __CSAPP_H__
 #define __CSAPP_H__
+//#define _POSIX_C_SOURCE 200112L // 태우가 준 코드. hostinfo.c 돌리기 위해
 
 #include <stdio.h>
 #include <stdlib.h>
