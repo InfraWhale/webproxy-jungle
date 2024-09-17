@@ -2,7 +2,24 @@
 
 // gcc -o echoserveri echoserveri.c ../csapp.c
 
-void echo(int connfd);
+// 호스트명 검색 : hostnamectl
+
+void echo(int connfd) {
+    size_t n;
+    char buf[MAXLINE];
+    rio_t rio;
+    
+    Rio_readinitb(&rio, connfd);
+    while((n = Rio_readlineb(&rio, buf, MAXLINE)) != 0) {
+        printf("while start!\n");
+        if(strcmp(buf, "exit\n") == 0)
+            break;
+        
+        printf("server received %d bytes\n", (int)n);
+        Rio_writen(connfd, buf, n);
+        printf("while end!\n");
+    }
+}
 
 int main(int argc, char **argv) {
     int listenfd, connfd;
@@ -24,6 +41,7 @@ int main(int argc, char **argv) {
         Getnameinfo((SA *) &clientaddr, clientlen, client_hostname, MAXLINE, client_port, MAXLINE, 0);
         printf("Connected to (%s, %s)\n", client_hostname, client_port);
         echo(connfd);
+        printf("Connfd Close!!\n");
         Close(connfd);
     }
     exit(0);
