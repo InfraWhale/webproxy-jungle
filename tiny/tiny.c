@@ -6,12 +6,15 @@
  * Updated 11/2019 droh
  *   - Fixed sprintf() aliasing issue in serve_static(), and clienterror().
  */
+
+// gcc -o tiny tiny.c
 #include "csapp.h"
+#include <signal.h>
 
 void doit(int fd);
 void read_requesthdrs(rio_t *rp);
 int parse_uri(char *uri, char *filename, char *cgiargs);
-void serve_static(int fd, char *filename, int filesize);
+void serve_static(int fd, char *filename, int filesize, int headflag);
 void get_filetype(char *filename, char *filetype);
 void serve_dynamic(int fd, char *filename, char *cgiargs);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg,
@@ -22,6 +25,10 @@ int main(int argc, char **argv) {
   char hostname[MAXLINE], port[MAXLINE];
   socklen_t clientlen;
   struct sockaddr_storage clientaddr;
+  signal(SIGPIPE, SIG_IGN); // SIGPIPE 신호 무시
+  // SIGPIPE : 프로세스가 파이프 또는 소켓을 통해 데이터를 쓰려고 했을 때, 상대 프로세스가 종료되거나 연결을 닫았을 경우 발생하는 신호.
+  // 이 신호가 발생 시, 기본적으로 프로그램은 종료된다.
+  // 이 신호를 무시할 경우 프로그램은 종료되지 않으나, write()또는 send()는 오류를 반환한다.  
 
   /* Check command line args */
   if (argc != 2) {
@@ -30,6 +37,7 @@ int main(int argc, char **argv) {
   }
 
   listenfd = Open_listenfd(argv[1]);
+
   while (1) {
     clientlen = sizeof(clientaddr);
     connfd = Accept(listenfd, (SA *)&clientaddr,
@@ -43,7 +51,7 @@ int main(int argc, char **argv) {
 }
 
 void doit(int fd) {
-  int is_static;
+  int is_static, is_head;
   struct stat sbuf;
   char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
   char filename[MAXLINE], cgiargs[MAXLINE];
@@ -55,7 +63,10 @@ void doit(int fd) {
   printf("Request headers:\n");
   printf("%s", buf);
   sscanf(buf, "%s %s %s", method, uri, version);
-  if (strcasecmp(method, "GET")) {
+
+  if (!strcasecmp(method, "HEAD")) {
+    is_head = 1;
+  } else if (strcasecmp(method, "GET")) {
     clienterror(fd, method, "501", "Not implemented", "Tiny does not implement this method");
     return;
   }
@@ -77,7 +88,7 @@ void doit(int fd) {
       clienterror(fd, filename, "403", "Forbidden", "Tiny couldn't read the file");
       return;
     }
-    serve_static(fd, filename, sbuf.st_size);
+    serve_static(fd, filename, sbuf.st_size, is_head);
   }
   else { /*dynamic content를 제공한다.*/
     if(!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) {
@@ -144,7 +155,7 @@ int parse_uri(char *uri, char *filename, char *cgiargs) {
   }
 }
 
-void serve_static(int fd, char *filename, int filesize) {
+void serve_static(int fd, char *filename, int filesize, int headflag) {
   int srcfd;
   char *srcp, filetype[MAXLINE], buf[MAXBUF];
 
@@ -159,23 +170,22 @@ void serve_static(int fd, char *filename, int filesize) {
   printf("Response headers:\n");
   printf("%s", buf);
 
+  if(headflag)
+    return;
+
   /* response body를 클라이언트에게 보낸다.*/
   srcfd = Open(filename, O_RDONLY, 0);
-  // Mmap() : 메모리 매핑
-  // addr : 커널에게 파일 어디 매핑할지 제안하는 값 (보통 0)
-  // len - filesize : 메모리 영역 길이
-  // prot - PROT_READ : 메모리 보호 정책. 지금은 읽기 가능한 페이지
-  // flags - MAP_PRIVATE : 매핑유형, 동작구성요소.
-  // MAP_PRIVATE - 매핑을 공유하지 않는다. 파일은 쓰기 후 복사로 매핑되고,
-  // 변경된 메모리속성은 실제 파일에는 반영되지 않는다. (왜쓰는거?)
-  // srcfd - 연결할 파일 디스크립터
-  // offset - 매핑 시 len의 시작점
-  
-  srcp =Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
+  // srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
+  srcp = malloc(MAXBUF);
+
+  int n;
+  while ((n = Rio_readn(srcfd, srcp, MAXBUF)) > 0) {
+      Rio_writen(fd, srcp, n);
+  }
   Close(srcfd);
-  Rio_writen(fd, srcp, filesize);
-  // Munmap() : 메모리 매핑 제거
-  Munmap(srcp, filesize);
+  
+  free(srcp);
+  
 }
 
 /**
@@ -190,6 +200,8 @@ void get_filetype(char *filename, char *filetype) {
     strcpy(filetype, "image/png");
   else if (strstr(filename, ".jpg"))
     strcpy(filetype, "image/jpeg");
+  else if (strstr(filename, ".mp4"))
+    strcpy(filetype, "video/mp4");
   else
     strcpy(filetype, "text/plain");
 }
@@ -201,17 +213,12 @@ void serve_dynamic(int fd, char *filename, char *cgiargs) {
   sprintf(buf, "HTTP/1.0 200 OK\r\n");
   Rio_writen(fd, buf, strlen(buf));
   sprintf(buf, "Server: Tiny Web Server\r\n");
-  Rio_writed(fd, buf, strlen(buf));
+  Rio_writen(fd, buf, strlen(buf));
 
-  if (Fork() == 0) { /*Child*/
-    /* 실제 서버는 모든 CGI 변수를 여기 세팅할것이다. */
-    setenv("QUERY_STRING", cgiargs, 1);
+  if (Fork() == 0) { /*자식 프로세스에서 실행된다.*/
+    setenv("QUERY_STRING", cgiargs, 1); /*환경변수를 cgiargs 대로 덮어씌운다.*/
     Dup2(fd, STDOUT_FILENO); /* stdout에서 클라이언트로 리다이렉트 한다. */
     Execve(filename, emptylist, environ); /* CGI 프로그램 작동 */
   }
-  Wait(NULL); /*Parent가 대기하고 child를 받는다 (?)*/
+  Wait(NULL); /*child 종료시까지 parent가 대기한다.*/
 }
-
-
-
-

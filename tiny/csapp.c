@@ -32,7 +32,12 @@
 void unix_error(char *msg) /* Unix-style error */
 {
     fprintf(stderr, "%s: %s\n", msg, strerror(errno));
-    exit(0);
+    
+    /* 민재가 알려준 코드 */
+    if(errno != EPIPE)
+        exit(0);
+    
+    //exit(0);
 }
 /* $end unixerror */
 
