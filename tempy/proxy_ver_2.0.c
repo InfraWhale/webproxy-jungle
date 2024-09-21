@@ -8,19 +8,6 @@
 
 // gcc -o proxy proxy.c csapp.c
 
-typedef struct {
-    char *host[MAXLINE]; /* 저장된 호스트명 */         
-    char *port[MAXLINE]; /* 저장된 포트 */
-    char *path[MAXLINE]; /* 저장된 경로*/
-    char *object[MAX_OBJECT_SIZE]; /* 저장된 객체 */
-    char *prev;       /* 이전 위치 */
-    char *next;       /* 다음 위치 */
-} cache_t;
-
-char *start; // 시작지점
-char *end; // 종료지점
-int cache_size = 0;
-
 void doit(int fd);
 void read_requesthdrs(rio_t *rp);
 int parse_uri(char *uri, char *host, char *port, char *path, char *cgiargs);
