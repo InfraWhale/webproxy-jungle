@@ -179,8 +179,8 @@ void serve_static(int fd, char *filename, int filesize, int headflag) {
   srcp = malloc(MAXBUF);
 
   int n;
-  while ((n = Rio_readn(srcfd, srcp, MAXBUF)) > 0) {
-      Rio_writen(fd, srcp, n);
+  while ((n = rio_readn(srcfd, srcp, MAXBUF)) > 0) {
+      rio_writen(fd, srcp, n);
   }
   Close(srcfd);
   

@@ -106,6 +106,7 @@ void doit(int fd) {
     clienterror(fd, method, "501", "Not implemented", "Tiny does not implement this method");
     return;
   }
+  // read_requesthdrs(&rio_from);
 
   /* GET 요청으로부터 URI를 파싱한다. */
   is_static = parse_uri(uri, host, port, path, cgiargs);
@@ -118,9 +119,6 @@ void doit(int fd) {
     while (find_pos != end) {
       if( !strcmp(host, find_pos->host) && !strcmp(port, find_pos->port) && !strcmp(path, find_pos->path) ) {
         Rio_writen(fd, find_pos->object, find_pos->size);
-
-        printf("finded file host : %s, port : %s, path : %s\n", find_pos->host, find_pos->port, find_pos->path);
-
         find_pos->prev->next = find_pos->next;
         find_pos->next->prev = find_pos->prev;
 
@@ -157,9 +155,6 @@ void doit(int fd) {
     while( cache_size + now_size > MAX_CACHE_SIZE ) {
       cache_t *del_pos = end->prev;
       if (del_pos != start) { // 시작점인지 체크
-
-        printf("deleted file host : %s, port : %s, path : %s\n", del_pos->host, del_pos->port, del_pos->path);
-        
         cache_size -= del_pos->size;
         del_pos->prev->next = end;
         end->prev = del_pos->prev;
@@ -171,8 +166,6 @@ void doit(int fd) {
     strcpy(new_cache->host, host);
     strcpy(new_cache->port, port);
     strcpy(new_cache->path, path);
-
-    printf("inserted file host : %s, port : %s, path : %s\n", new_cache->host, new_cache->port, new_cache->path);
 
     memcpy(new_cache->object, temp_object, now_size);  // 임시 객체 내용을 캐시로 복사
     new_cache->size = now_size;
@@ -208,6 +201,19 @@ void clienterror(int fd, char *cause, char*errnum, char *shortmsg, char *longmsg
   sprintf(buf, "Content-length: %d\r\n\r\n", (int)strlen(body));
   Rio_writen(fd, buf, strlen(buf));
   Rio_writen(fd, body, strlen(body));
+}
+
+void read_requesthdrs(rio_t *rp) {
+  char buf[MAXLINE];
+
+  if(Rio_readlineb(rp, buf, MAXLINE) <= 0)
+    return;
+  while(strcmp(buf, "\r\n")) {
+    if(Rio_readlineb(rp, buf, MAXLINE) <= 0)
+    return;
+    printf("%s", buf);
+  }
+  return;
 }
 
 int parse_uri(char *uri, char *host, char *port, char *path, char *cgiargs) {
