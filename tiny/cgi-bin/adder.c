@@ -11,23 +11,29 @@ int main(void) {
 
   /*인자 2개를 추출한다.*/
   if ((buf = getenv("QUERY_STRING")) != NULL) { // 환경변수 중 QUERY_STRING을 추출한다.
-    p = strchr(buf, '&'); // buf에서 & 위치의 포인터를 리턴
-    *p = '\0'; // 이거 왜해줌? split?
+    p = strchr(buf, '&'); // buf에서 & 위치의 포인터를 리턴한다.
+    *p = '\0'; // p위치에 붙혀줘서 문자열의 끝임을 알려준다.
     strcpy(arg1, buf);
     strcpy(arg2, p+1);
+
+    /*인자에 firstVal이 있는 경우*/
+    /* firstVal=1111 secondVal=222 */
     if (strncmp(arg1, "firstVal", strlen("firstVal")) == 0) {
       char *temp;
+
+      /* 첫번째 인자 */
       temp = strchr(arg1, '=');
-      strcpy(arg1, temp+1);
+      strcpy(arg1, temp+1); // '=' 뒷부분만 가져온다.
       
-      if(!strcmp(arg1, "")) {
+      if(!strcmp(arg1, "")) { // 값이 없으면 0으로 취급한다.
         strcpy(arg1, "0");
       }
 
-      temp = strchr(arg2, '=');
+      /* 두번째 인자 */
+      temp = strchr(arg2, '='); // '=' 뒷부분만 가져온다.
       strcpy(arg2, temp+1);
 
-      if(!strcmp(arg2, "")) {
+      if(!strcmp(arg2, "")) { // 값이 없으면 0으로 취급한다.
         strcpy(arg2, "0");
       }
     }
@@ -47,7 +53,7 @@ int main(void) {
   printf("Content-length: %d\r\n", (int)strlen(content));
   printf("Content-type: text/html\r\n\r\n");
   printf("%s", content);
-  fflush(stdout); // 지정된 출력 스트림과 연관된 버퍼를 비움
+  fflush(stdout); // 지정된 출력 스트림과 연관된 버퍼를 비운다.
 
   exit(0);
 }

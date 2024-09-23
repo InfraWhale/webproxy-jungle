@@ -30,69 +30,8 @@ BASIC_LIST="home.html
             csapp.c
             tiny.c
             godzilla.jpg
-            tiny
-            "
+            tiny"
 
-# List of text files for the cache test
-# CACHE_LIST="tiny.c
-#             home.html
-#             csapp.c
-#             tiny
-#             godzilla.jpg"
-
-# #should be cached 6-15
-# CACHE_LIST1="cache_test/test1.txt
-#             cache_test/test2.txt
-#             cache_test/test3.txt
-#             cache_test/test4.txt
-#             cache_test/test5.txt
-#             cache_test/test6.txt
-#             cache_test/test7.txt
-#             cache_test/test8.txt
-#             cache_test/test9.txt
-#             cache_test/test10.txt
-#             cache_test/test11.txt
-#             cache_test/test12.txt
-#             cache_test/test13.txt
-#             cache_test/test14.txt
-#             cache_test/test15.txt"
-
-# CACHE_LIST2="cache_test/test1.txt
-#             cache_test/test2.txt
-#             cache_test/test3.txt
-#             cache_test/test4.txt
-#             cache_test/test5.txt"
-
-# # The file we will fetch for various tests
-# FETCH_FILE="csapp.c"
-
-# FETCH_LIST1="cache_test/test1.txt
-#             cache_test/test2.txt
-#             cache_test/test3.txt
-#             cache_test/test4.txt
-#             cache_test/test5.txt"
-
-# FETCH_LIST2="cache_test/test15.txt
-#             cache_test/test14.txt
-#             cache_test/test13.txt
-#             cache_test/test12.txt
-#             cache_test/test11.txt
-#             cache_test/test10.txt
-#             cache_test/test9.txt
-#             cache_test/test8.txt
-#             cache_test/test7.txt
-#             cache_test/test6.txt"
-
-# FETCH_LIST3="cache_test/test6.txt
-#             cache_test/test7.txt
-#             cache_test/test8.txt
-#             cache_test/test9.txt
-#             cache_test/test10.txt
-#             cache_test/test11.txt
-#             cache_test/test12.txt
-#             cache_test/test13.txt
-#             cache_test/test14.txt
-#             cache_test/test15.txt"
 CACHE_LIST="tiny.c
 home.html
 csapp.c
@@ -124,7 +63,6 @@ cache_test/test2.txt
 cache_test/test1.txt"
 
 # The file we will fetch for various tests
-FETCH_FILE="csapp.c"
 
 FETCH_LIST1="cache_test/test1.txt
 cache_test/test2.txt
@@ -154,12 +92,13 @@ cache_test/test8.txt
 cache_test/test9.txt
 cache_test/test10.txt"
 
-FETCH_LIST4="
-cache_test/test11.txt
+FETCH_LIST4="cache_test/test11.txt
 cache_test/test12.txt
 cache_test/test13.txt
 cache_test/test14.txt
 cache_test/test15.txt"
+
+CANTCACHE="cache_test/test16.txt"
 
 #####
 # Helper functions
@@ -267,7 +206,7 @@ function free_port {
 #
 
 # Kill any stray proxies or tiny servers owned by this user
-# killall -q proxy tiny nop-server.py 2> /dev/null # 나중에 살리기
+killall -q proxy tiny nop-server.py 2> /dev/null
 
 # Make sure we have a Tiny directory
 if [ ! -d ./tiny ]
@@ -330,67 +269,67 @@ trap 'echo "Timeout waiting for the server to grab the port reserved for it"; ki
 #####
 # Basic
 #
-# echo "*** Basic ***" # @@ 추후 복구
+# echo "*** Basic ***"
 
-# # Run the Tiny Web server
-# tiny_port=$(free_port)
-# echo "Starting tiny on ${tiny_port}"
-# cd ./tiny
-# ./tiny ${tiny_port}   &> /dev/null  &
-# tiny_pid=$!
-# cd ${HOME_DIR}
+# Run the Tiny Web server
+tiny_port=$(free_port)
+echo "Starting tiny on ${tiny_port}"
+cd ./tiny
+./tiny ${tiny_port}   &> /dev/null  &
+tiny_pid=$!
+cd ${HOME_DIR}
 
-# # Wait for tiny to start in earnest
-# wait_for_port_use "${tiny_port}"
+# Wait for tiny to start in earnest
+wait_for_port_use "${tiny_port}"
 
-# # Run the proxy
-# proxy_port=$(free_port)
-# echo "Starting proxy on ${proxy_port}"
-# ./proxy ${proxy_port}  &> /dev/null &
-# proxy_pid=$!
+# Run the proxy
+proxy_port=$(free_port)
+echo "Starting proxy on ${proxy_port}"
+./proxy ${proxy_port}  &> /dev/null &
+proxy_pid=$!
 
-# # Wait for the proxy to start in earnest
-# wait_for_port_use "${proxy_port}"
+# Wait for the proxy to start in earnest
+wait_for_port_use "${proxy_port}"
 
 
-# # Now do the test by fetching some text and binary files directly from
-# # Tiny and via the proxy, and then comparing the results.
-# numRun=0
-# numSucceeded=0
-# for file in ${BASIC_LIST}
-# do
-#     numRun=`expr $numRun + 1`
-#     echo "${numRun}: ${file}"
-#     clear_dirs
+# Now do the test by fetching some text and binary files directly from
+# Tiny and via the proxy, and then comparing the results.
+numRun=0
+numSucceeded=0
+for file in ${BASIC_LIST}
+do
+    numRun=`expr $numRun + 1`
+    echo "${numRun}: ${file}"
+    clear_dirs
 
-#     # Fetch using the proxy
-#     echo "   Fetching ./tiny/${file} into ${PROXY_DIR} using the proxy"
-#     download_proxy $PROXY_DIR ${file} "http://localhost:${tiny_port}/${file}" "http://localhost:${proxy_port}"
+    # Fetch using the proxy
+    echo "   Fetching ./tiny/${file} into ${PROXY_DIR} using the proxy"
+    download_proxy $PROXY_DIR ${file} "http://localhost:${tiny_port}/${file}" "http://localhost:${proxy_port}"
 
-#     # Fetch directly from Tiny
-#     echo "   Fetching ./tiny/${file} into ${NOPROXY_DIR} directly from Tiny"
-#     download_noproxy $NOPROXY_DIR ${file} "http://localhost:${tiny_port}/${file}"
+    # Fetch directly from Tiny
+    echo "   Fetching ./tiny/${file} into ${NOPROXY_DIR} directly from Tiny"
+    download_noproxy $NOPROXY_DIR ${file} "http://localhost:${tiny_port}/${file}"
 
-#     # Compare the two files
-#     echo "   Comparing the two files"
-#     diff -q ${PROXY_DIR}/${file} ${NOPROXY_DIR}/${file} &> /dev/null
-#     if [ $? -eq 0 ]; then
-#         numSucceeded=`expr ${numSucceeded} + 1`
-#         echo "   Success: Files are identical."
-#     else
-#         echo "   Failure: Files differ."
-#     fi
-# done
+    # Compare the two files
+    echo "   Comparing the two files"
+    diff -q ${PROXY_DIR}/${file} ${NOPROXY_DIR}/${file} &> /dev/null
+    if [ $? -eq 0 ]; then
+        numSucceeded=`expr ${numSucceeded} + 1`
+        echo "   Success: Files are identical."
+    else
+        echo "   Failure: Files differ."
+    fi
+done
 
-# echo "Killing tiny and proxy"
-# kill $tiny_pid 2> /dev/null
-# wait $tiny_pid 2> /dev/null
-# kill $proxy_pid 2> /dev/null
-# wait $proxy_pid 2> /dev/null
+echo "Killing tiny and proxy"
+kill $tiny_pid 2> /dev/null
+wait $tiny_pid 2> /dev/null
+kill $proxy_pid 2> /dev/null
+wait $proxy_pid 2> /dev/null
 
-# basicScore=`expr ${MAX_BASIC} \* ${numSucceeded} / ${numRun}`
+basicScore=`expr ${MAX_BASIC} \* ${numSucceeded} / ${numRun}`
 
-# echo "basicScore: $basicScore/${MAX_BASIC}" ## @@ 추후복구 end
+echo "basicScore: $basicScore/${MAX_BASIC}"
 
 
 ######
@@ -482,8 +421,7 @@ cd ${HOME_DIR}
 wait_for_port_use "${tiny_port}"
 
 # Run the proxy
-# proxy_port=$(free_port)
-proxy_port=1541
+proxy_port=$(free_port)
 echo "Starting proxy on port ${proxy_port}"
 ./proxy ${proxy_port} &> /dev/null &
 proxy_pid=$!
@@ -630,6 +568,70 @@ if [ $cacheScore -eq 30 ]; then
 else
     echo "cached wrong files...fail"
 fi
+
+# 3. check if your cache can block over 100KB file
+# Run the Tiny Web server
+# tiny_port=$(free_port) ## @@ 일단 지운 부분
+echo "Starting tiny on port ${tiny_port}"
+cd ./tiny
+./tiny ${tiny_port} &> /dev/null &
+tiny_pid=$!
+cd ${HOME_DIR}
+
+clear_dirs
+FILE_NAME=$(basename "$CANTCACHE")
+echo "Fetching ./tiny/${CANTCACHE} into ${PROXY_DIR} using the proxy"
+download_proxy $PROXY_DIR ${FILE_NAME} "http://localhost:${tiny_port}/${CANTCACHE}" "http://localhost:${proxy_port}"
+
+# Kill Tiny
+echo "Killing tiny"
+kill $tiny_pid 2> /dev/null
+wait $tiny_pid 2> /dev/null
+
+# Try fetch test16.txt which is over 100KB
+echo "Fetching a cached copy of ./tiny/${CANTCACHE} into ${NOPROXY_DIR}"
+download_proxy $NOPROXY_DIR ${FILE_NAME} "http://localhost:${tiny_port}/${CANTCACHE}" "http://localhost:${proxy_port}"
+echo "./tiny/${CANTCACHE} ${NOPROXY_DIR}/${FILE_NAME}"
+diff -q ./tiny/${CANTCACHE} ${NOPROXY_DIR}/${FILE_NAME}
+
+if [ $? -ne 0 ]; then
+    ((cacheScore+=5))
+    echo "Success: Was not able to fetch tiny/${CANTCACHE} from the cache."
+else
+    echo "Failure: Was able to fetch tiny/${CANTCACHE} from the proxy cache."
+fi
+
+if [ $cacheScore -eq 35 ]; then
+    echo "can't cache over 100kB...success"
+else
+    echo "cached wrong files...fail"
+fi
+
+## get 1-10 from proxy. These files are in cache so you can get it from proxy.
+for file in ${FETCH_LIST3}
+do
+    echo "Fetching a cached copy of ./tiny/${file} into ${NOPROXY_DIR}"
+    FILE_NAME=$(basename "$file")
+    download_proxy $NOPROXY_DIR ${FILE_NAME} "http://localhost:${tiny_port}/${file}" "http://localhost:${proxy_port}" &> ./logdown
+done
+for file in ${FETCH_LIST3}
+do
+    FILE_NAME=$(basename "$file")
+    diff -q ./tiny/${file} ${NOPROXY_DIR}/${FILE_NAME}  &> ./log
+    if [ $? -eq 0 ]; then
+        ((cacheScore+=1))
+        echo "Success: Was able to fetch tiny/${file} from the cache."
+    else
+             
+        echo "Failure: Was not able to fetch tiny/${file} from the proxy cache."
+    fi
+done
+if [ $cacheScore -eq 45 ]; then
+    echo "cached appropriate files...success"
+else
+    echo "cached wrong files...fail"
+fi
+
 #Kill the proxy
 echo "Killing proxy"
 kill $proxy_pid 2> /dev/null
@@ -643,4 +645,3 @@ maxScore=`expr ${MAX_BASIC} + ${MAX_CACHE} + ${MAX_CONCURRENCY}`
 echo ""
 echo "totalScore: ${totalScore}/${maxScore}"
 exit
-

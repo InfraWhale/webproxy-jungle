@@ -36,7 +36,7 @@ static const char *user_agent_hdr =
     "Firefox/10.0.3\r\n";
 
 int main(int argc, char **argv) {
-  int listenfd, *connfdp; // 듣기 & 연결 파일 디스크럽터, 
+  int listenfd, *connfdp; // 듣기 & 연결 파일 디스크럽터
   char hostname[MAXLINE], port[MAXLINE]; // 호스트명, 포트
 
   struct sockaddr_storage clientaddr; // 클라이언트 주소
@@ -88,8 +88,7 @@ void *thread(void *vargp) {
 
 /* 실제 작업이 일어나는 함수 */
 void doit(int fd) {
-  int is_static, is_head, client_fd;
-  struct stat sbuf;
+  int client_fd;
   char buf_from[MAXLINE], buf_to[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
   char host[MAXLINE], port[MAXLINE], path[MAXLINE], cgiargs[MAXLINE];
   rio_t rio_from, rio_to;

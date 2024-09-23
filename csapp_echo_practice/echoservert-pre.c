@@ -23,6 +23,8 @@ void echo(int connfd) {
     }
 }
 
+sbuf_t sbuf;
+
 int main(int argc, char **argv) {
     int listenfd, *connfdp; // connfd로 바로 받지 말고, 포인터로 받는다.
     socklen_t clientlen;
